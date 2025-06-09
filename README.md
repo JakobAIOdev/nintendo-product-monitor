@@ -160,6 +160,13 @@ nintendo-product-monitor/
 └── README.md
 ```
 
+## Screenshots
+<img width="421" alt="image" src="https://github.com/user-attachments/assets/fc248e01-6834-43a8-9ebf-a578f97010ea" />
+<br>
+<img width="437" alt="image" src="https://github.com/user-attachments/assets/35e251e5-8fbf-447c-9ddf-b4ec8c2c6c11" />
+
+
+
 ## Dependencies
 
 - **discord.js**: Discord API wrapper
