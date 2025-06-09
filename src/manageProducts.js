@@ -12,6 +12,7 @@ async function showAllProducts() {
                                         product_id: row.product_id,
                                         product_price: row.product_price + "€",
                                         product_path: "https://store.nintendo.de/de" + row.product_path,
+                                        product_img: row.product_img,
                                         is_instock: row.is_instock
                                         }));
     } catch(error){
@@ -45,9 +46,11 @@ async function addProduct(productID) {
         const productName = productObj.name;
         const productUrl = productObj.path;
         const productPrice = productObj.price.value;
+        const productImg = productObj.imageGroups[0].images[0].link;
+        const updatedImg = productImg.replace('upload', 'private');
         const result = await pool.query(
-            'INSERT INTO monitor_products (product_id, product_name, product_path, product_price) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-            [productID, productName, productUrl, productPrice]
+            'INSERT INTO monitor_products (product_id, product_name, product_path, product_img, product_price) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING',
+            [productID, productName, productUrl, updatedImg, productPrice]
         );
 
         if (result.rowCount === 0) {
@@ -84,6 +87,7 @@ async function getProduct(productID) {
         method: "get",
         maxBodyLength: Infinity,
         url: `https://store.nintendo.de/api/catalog/product?id=${productID}`,
+        timeout: 10000, // Add 10 second timeout
         headers: {
             accept: "*/*",
             "accept-language":
@@ -103,10 +107,10 @@ async function getProduct(productID) {
 
     try {
         const response = await axios.request(config);
-        //console.log(JSON.stringify(response.data));
         return response.data.data;
     } catch (error) {
-        console.log(error);
+        console.error(`Error fetching product ${productID}:`, error.message);
+        return null;
     }
 }
 

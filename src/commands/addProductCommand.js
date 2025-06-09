@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import {showAllProducts, changeStock, addProduct, removeProduct, getProduct} from "../manageProducts.js";
+import {addProduct} from "../manageProducts.js";
 
 export default {
     data: new SlashCommandBuilder()
