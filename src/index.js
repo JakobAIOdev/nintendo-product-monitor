@@ -10,3 +10,5 @@ async function testConnection() {
 }
 
 testConnection();
+
+//await pool.end();
