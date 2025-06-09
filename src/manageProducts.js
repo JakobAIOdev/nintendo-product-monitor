@@ -112,7 +112,9 @@ async function getProduct(productID) {
 
 //console.log(await showAllProducts());
 //console.log(await removeProduct('000000000010015151'));
-//console.log( await addProduct("70010000096802"));
+//console.log( await addProduct("000000000010015151"));
+//console.log(await changeStock(false, '70010000096802'));
+
 //console.log(await changeStock(false, '70010000096802'));
 
 export {showAllProducts, changeStock, addProduct, removeProduct, getProduct};
