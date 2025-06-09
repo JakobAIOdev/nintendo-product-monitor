@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { showAllProducts } from '../manageProducts.js';
 
 export default {
@@ -13,17 +13,24 @@ export default {
             if (!products.length) {
                 return interaction.editReply('There are currently no products in monitoring.');
             }
-            const productList = products.map((p, i) =>
-                `**${i + 1}. ${p.product_name}**\n` +
-                `ID: \`${p.product_id}\`\n` +
-                `Price: ${p.product_price}\n` +
-                `Status: ${p.is_instock ? '🟢 INSTOCK' : '🔴 OOS'}\n` +
-                `[About the product](${p.product_path})\n`
-            ).join('\n');
-
-            return interaction.editReply({
-                content: `**Products currently monitored:**\n\n${productList}`
+            const embeds = products.map((p, i) => {
+                const embed = new EmbedBuilder()
+                    .setTitle(`${i + 1}. ${p.product_name}`)
+                    .setURL(p.product_path)
+                    .addFields(
+                        { name: 'ID', value: `\`${p.product_id}\``, inline: true },
+                        { name: 'Price', value: p.product_price, inline: true },
+                        { name: 'Status', value: p.is_instock ? '🟢 INSTOCK' : '🔴 OOS', inline: true }
+                    )
+                    .setColor(p.is_instock ? 0x57f287 : 0xed4245)
+                    .setFooter({ text: 'Nintendo Product Monitor' });
+                if (p.product_img) {
+                    embed.setImage(p.product_img);
+                }
+                return embed;
             });
+
+            return interaction.editReply({ embeds });
         } catch (error) {
             console.error(error);
             return interaction.editReply(`Error fetching products: ${error.message}`);
