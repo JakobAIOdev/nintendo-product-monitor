@@ -1,33 +1,87 @@
 import pool from "./db.js";
 import { getProduct, showAllProducts, changeStock } from "./manageProducts.js";
-let running = true;
+import dotenv from 'dotenv';
+dotenv.config();
+import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
+import fs from 'node:fs';
 
-async function monitorLoop() {
-    const products = await showAllProducts();
-    if(products.length < 1) running = false;
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+    ],
+});
 
-    for(const product of products){
-        if(product.is_instock === false){
-            const response = await getProduct(product.product_id);
-            if(response.inventory.orderable === true){
-                console.log(`Product ${response.name} (${response.id}) is Instock!`);
-                console.log(await changeStock(true, product.product_id));
-            }else{
-                console.log(`Product ${response.name} (${response.id}) is OOS`);
-            }
-        }else if(product.is_instock === true){
-            const response = await getProduct(product.product_id);
-            if(response.inventory.orderable === false){
-                console.log(await changeStock(false, product.product_id));
-            }
-        }
-    }
+client.commands = new Collection();
 
-    if(running){
-        //const nextDelay = Math.floor((5 + Math.random() * 5) * 60 * 1000);
-        const nextDelay = 5000;
-        setTimeout(monitorLoop, nextDelay);
+async function loadCommands() {
+    const commandFiles = fs.readdirSync('./src/commands').filter(file => file.endsWith('.js'));
+    for (const commandFile of commandFiles) {
+        const command = await import(`./commands/${commandFile}`);
+        client.commands.set(command.default.data.name, command.default);
     }
 }
 
-monitorLoop();
+async function monitorLoop() {
+    try {
+        const products = await showAllProducts();
+        if (products.length < 1) {
+            console.log("No products to monitor. Stopping loop.");
+            return;
+        }
+
+        for (const product of products) {
+            try {
+                const response = await getProduct(product.product_id);
+                if (product.is_instock === false && response.inventory.orderable === true) {
+                    console.log(`Product ${response.name} (${response.id}) is Instock!`);
+                    console.log(await changeStock(true, product.product_id));
+                } else if (product.is_instock === true && response.inventory.orderable === false) {
+                    console.log(await changeStock(false, product.product_id));
+                } else{
+                    console.log(`${product.product_name}, (${product.product_id}) OOS..`)
+                }
+            } catch (err) {
+                console.error(`Error processing product ${product.product_id}:`, err);
+            }
+        }
+    } catch (err) {
+        console.error("Error in monitorLoop:", err);
+    } finally {
+        setTimeout(monitorLoop, 5000);
+    }
+}
+
+client.once(Events.ClientReady, async () => {
+    console.log(`Logged in as ${client.user.tag}`);
+    await loadCommands();
+    monitorLoop();
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+    if (!interaction.isCommand()) return;
+
+    const command = client.commands.get(interaction.commandName);
+
+    if (command) {
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            if (interaction.deferred || interaction.replied) {
+                interaction.editReply("Fehler aufgetreten");
+            } else {
+                interaction.reply("Fehler aufgetreten");
+            }
+        }
+    }
+});
+
+client.login(process.env.DISCORD_BOT_TOKEN).catch(console.error);
+
+process.on('SIGINT', async () => {
+    console.log("Shutting down, closing db ...");
+    await pool.end();
+    process.exit(0);
+});
